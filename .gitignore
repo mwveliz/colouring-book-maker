@@ -1,4 +1,7 @@
 .env
 .bin/*
- __pycache__*
-
+__pycache__/*
+*.pyc
+.venv/
+.streamlit/secrets.toml
+__pycache__/streamlit_app.cpython-311.pyc

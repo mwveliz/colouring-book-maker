@@ -4,6 +4,8 @@ Convierte fotos e ilustraciones en láminas listas para imprimir y colorear,
 con opción de auto-detección ("adivinar") de parámetros y exportación a PDF A4.
 """
 
+import hashlib
+import hmac
 import io
 from typing import List, Tuple
 import cv2
@@ -21,6 +23,38 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+
+# ==============================================================================
+# Control de Acceso (Protección por Contraseña)
+# ==============================================================================
+def check_password() -> bool:
+    """Verifica la contraseña mediante hash SHA-256 antes de renderizar la aplicación."""
+    if st.session_state.get("authenticated", False):
+        return True
+
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.subheader("🔒 Acceso Restringido")
+        with st.form("login_form"):
+            pwd = st.text_input("Contraseña", type="password")
+            submit = st.form_submit_button("Entrar", use_container_width=True)
+            if submit:
+                input_hash = hashlib.sha256(pwd.encode("utf-8")).hexdigest()
+                expected_hash = st.secrets.get("PASSWORD_HASH", "")
+                if not expected_hash:
+                    st.error("⚠️ Configura 'PASSWORD_HASH' en los Secrets de Streamlit.")
+                elif hmac.compare_digest(input_hash, expected_hash):
+                    st.session_state["authenticated"] = True
+                    st.rerun()
+                else:
+                    st.error("❌ Contraseña incorrecta")
+
+    return False
+
+
+if not check_password():
+    st.stop()
 
 
 # ==============================================================================
@@ -239,6 +273,9 @@ st.write("Convierte tus fotos e ilustraciones en páginas listas para colorear e
 
 with st.sidebar:
     st.header("⚙️ Ajustes")
+    if st.button("🚪 Cerrar sesión", key="logout_btn", use_container_width=True):
+        st.session_state["authenticated"] = False
+        st.rerun()
     
     uploaded_files = st.file_uploader(
         "Sube una o varias imágenes",
